@@ -1,15 +1,25 @@
-define(['local_imagefilepicker/cropper','jquery'], function(Cropper,$) {
+define(['local_imgfilemanager/cropper','jquery'], function(Cropper,$) {
   var cropper;
   var originalImageURL;
 
   return {
 
       init: function(srcimg) {
+
+
+
+      function getBase64Image(img) {
+        var canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        var dataURL = canvas.toDataURL("image/png");
+        return dataURL.replace(/^data:image\/(png|jpg);base64,/, "");
+      }
       //var Cropper = window.Cropper;
-      var URL = window.URL || window.webkitURL;
       var options;
       var image = document.getElementById('src-img');
-      var download;
       var actions = document.getElementById('actions');
 
       // if (srcimg != null) {
@@ -87,7 +97,12 @@ define(['local_imagefilepicker/cropper','jquery'], function(Cropper,$) {
               break;
 
           }
+          $('#btn64').on('click', function() {
+            debugger;
+            var dataUrl= cropper.getCroppedCanvas().toDataURL();
+            $('#id_image').val(dataUrl);
 
+          });
           if (typeof result === 'object' && result !== cropper && input) {
             try {
               input.value = JSON.stringify(result);
