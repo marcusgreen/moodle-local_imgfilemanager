@@ -33,11 +33,11 @@ use local_imgfilemanager\imgfilemanager;
 
 $PAGE->set_context(context_system::instance());
 $PAGE->set_url('/local/filedemo.php');
-$filename = '';
 class local_filedemo_form extends moodleform {
     protected function definition() {
        global $CFG,$PAGE;
         $mform = $this->_form;
+        $filename = '';
 
 
         $PAGE->requires->js_call_amd('local_imgfilemanager/editimage', 'init',['src-img']);
@@ -53,10 +53,11 @@ class local_filedemo_form extends moodleform {
           $file = reset($filerecord);
           $content = $file->get_content();
           $file_base64 = base64_encode($content);
-            // $file = array_shift($filerecord);
-            // $url = \moodle_url::make_pluginfile_url($file->get_contextid(),
-            // $file->get_component(), $file->get_filearea(), $file->get_itemid(), $file->get_filepath(), $file->get_filename());
-            // $fileurl= $url->out();
+            $file = array_shift($filerecord);
+            $filename = $file->get_filename();
+            $url = \moodle_url::make_pluginfile_url($file->get_contextid(),
+            $file->get_component(), $file->get_filearea(), $file->get_itemid(), $file->get_filepath(), $file->get_filename());
+            $fileurl= $url->out();
         }
         // //$imagefile = $storage->get_file($context->id, 'badges', 'badgeimage', $this->_data->id, '/', 'f3.png');
         // $fr = reset($filerecord);
@@ -71,7 +72,7 @@ class local_filedemo_form extends moodleform {
 
 
         $html ='<div id="mavg" style="width:300px; height:300px">
-        <img id="src-img" src=data:image/png;base64,'.$file_base64.'>
+        <img id="src-img" src='.$fileurl.'>
         </div>
         <div id="actions">
           <div class="docs-buttons">
@@ -88,6 +89,9 @@ class local_filedemo_form extends moodleform {
 
         $mform->addElement('html',$html);
         $mform->addElement('textarea','image','', ['rows' => 6, 'cols' => 80]);
+        $mform->addElement('text','imgfilename');
+        $mform->setDefault('imgfilename',$filename);
+        $mform->setType('imgfilename',PARAM_RAW);
 
         $draftitemid = 0;
         $context=context_system::instance();
@@ -111,15 +115,41 @@ $mform->display();
 echo $OUTPUT->footer();
 if($data =$mform->get_data()){
     if(isset($data->saveimage)){
-      $data = optional_param('image',0,PARAM_RAW);
-      $exploded = explode(',', $data, 2); // limit to 2 parts, i.e: find the first comma
+      $imagedata = optional_param('image',0,PARAM_RAW);
+      $exploded = explode(',', $imagedata, 2); // limit to 2 parts, i.e: find the first comma
       $encoded = $exploded[1]; // pick up the 2nd part
       $decoded = base64_decode($encoded);
-      $output_file = 'mavgmavg.png';
-      $file = fopen($output_file, "wb");
-      fwrite($file, $decoded);
-      fclose($file);
+      $storage = get_file_storage();
+      $tempdir = $CFG->tempdir;
+
+      $syscontext = context_system::instance();
+      $filerecord = new stdClass();
+      $filerecord->contextid = $syscontext->id;
+      $filerecord->component = 'local_filedemo';
+      $filerecord->filearea = 'imgfilemanager';
+      $filerecord->filepath = '/';
+      $filerecord->userid = 2;
+      $filerecord->filename = $data->imgfilename;
+      $filerecord->itemid = 0;
+
+      $fs = get_file_storage();
+     // https://moodle.org/mod/forum/discuss.php?d=376267
+
+      $oldfile = $fs->get_file($filerecord->contextid, 'local_filedemo', 'imgfilemanager',0, '/', 'moodlelogo.png');
+      $oldfile->delete();
+      $file1 = $fs->create_file_from_string($filerecord, $decoded);
+       //$newfile = $fs->create_file_from_pathname($filerecord, "/");
+      // $permanentfile = $fs->get_file_by_id($permfilerecord->id);
+      // $permanentfile->replace_file_with($newfile);
+
+      // $output_file = 'mavgmavg.png';
+      // $file = fopen($output_file, "wb");
+      // fwrite($file, $decoded);
+      // fclose($file);
       //https://docs.moodle.org/dev/File_API#Moving_files_around
+
+      //$draftitemid = file_get_submitted_draft_itemid('imgfilemanager');
+
 
     } else {
     $fileparam = ['maxbytes' => 2048, 'areamaxbytes' => 10485760, 'maxfiles' => 1];
@@ -135,5 +165,10 @@ if($data =$mform->get_data()){
             0,
             ['subdirs' => 0, 'maxbytes' => 0, 'maxfiles' => 1]
         );
+        $fs = get_file_storage();
+
+        $files = $fs->get_directory_files($context->id, 'local_filedemo', 'imgfilemanager', $draftitemid, "/", false);
+
       }
+
 }

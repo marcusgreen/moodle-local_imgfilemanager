@@ -97,10 +97,11 @@ define(['local_imgfilemanager/cropper','jquery'], function(Cropper,$) {
               break;
 
           }
-          $('#btn64').on('click', function() {
+          $('#id_saveimage').on('click', function() {
             debugger;
             var dataUrl= cropper.getCroppedCanvas().toDataURL();
             $('#id_image').val(dataUrl);
+            var imgfile = $("#fitem_id_imgfilemanager .filepicker-container");
 
           });
           if (typeof result === 'object' && result !== cropper && input) {
